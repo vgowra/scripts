@@ -1,0 +1,54 @@
+---
+- name: Installing configuration with set commands
+  hosts:
+    - all
+  roles:
+    - Juniper.junos
+  connection: local
+  gather_facts: false
+
+  vars_prompt:
+    - name: Username
+      prompt: Junos Username
+      private: false
+
+    - name: Password
+      prompt: Junos Password
+      private: true
+
+
+  tasks:
+    - name: Install set file onto device
+      juniper_junos_config:
+        provider:
+          host: "{{ ansible_host }}"
+          port: 22
+          timeout: 120
+          user: "{{ Username }}"
+          passwd: "{{ Password }}"
+        load: set
+        src: "config/pre-config.set"
+#        comment: "Commit Confirmed"
+#        confirmed: 5
+        diff: yes
+        ignore_warning: yes
+      register: config_results
+      notify: Confirm previous commit
+
+    - name: Show configuration change
+      debug:
+        var: config_results.diff_lines
+      when: config_results.diff_lines is defined
+
+  handlers:
+    - name: Confirm previous commit
+      juniper_junos_config:
+        provider:
+          host: "{{ ansible_host }}"
+          port: 22
+          timeout: 120
+          user: "{{ Username }}"
+          passwd: "{{ Password }}"
+        comment: "config"
+        commit: yes 
+        diff: no
